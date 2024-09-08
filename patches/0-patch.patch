@@ -1,0 +1,126 @@
+diff --git a/build.sh b/build.sh
+index e663cce..341d3f9 100755
+--- a/build.sh
++++ b/build.sh
+@@ -74,7 +74,7 @@ BUILD_ARGS_COMMON="
+ 	--platform=linux/${GOARCH}
+ 	--build-arg POLICY --build-arg PLATFORM --build-arg BASEIMAGE
+ 	--build-arg DEVTOOLSET_ROOTPATH --build-arg PREPEND_PATH --build-arg LD_LIBRARY_PATH_ARG
+-	--rm -t quay.io/pypa/${POLICY}_${PLATFORM}:${COMMIT_SHA}
++	--rm -t ghcr.io/karellen/${POLICY}_${PLATFORM}:${COMMIT_SHA}
+ 	-f docker/Dockerfile docker/
+ "
+ 
+@@ -104,7 +104,7 @@ else
+ 	exit 1
+ fi
+ 
+-docker run --rm -v $(pwd)/tests:/tests:ro quay.io/pypa/${POLICY}_${PLATFORM}:${COMMIT_SHA} /tests/run_tests.sh
++docker run --rm -v $(pwd)/tests:/tests:ro ghcr.io/karellen/${POLICY}_${PLATFORM}:${COMMIT_SHA} /tests/run_tests.sh
+ 
+ if [ ${USE_LOCAL_CACHE} -ne 0 ]; then
+ 	if [ -d $(pwd)/.buildx-cache-${POLICY}_${PLATFORM} ]; then
+diff --git a/deploy.sh b/deploy.sh
+index d59ae7b..dda6960 100755
+--- a/deploy.sh
++++ b/deploy.sh
+@@ -11,7 +11,7 @@ fi
+ 
+ set -x
+ 
+-TAG="quay.io/pypa/${POLICY}_${PLATFORM}"
++TAG="ghcr.io/karellen/${POLICY}_${PLATFORM}"
+ COMMIT_ABBREV_SHA=$(git show -s --format=%h ${COMMIT_SHA})
+ COMMIT_DATE=$(git show -s --format=%cd --date=short ${COMMIT_SHA})
+ BUILD_ID=${COMMIT_DATE}-${COMMIT_ABBREV_SHA}
+@@ -30,7 +30,7 @@ docker tag ${TAG}:${COMMIT_SHA} ${TAG}:latest
+ set +x
+ 
+ if [ $DRY_RUN -eq 0 ]; then
+-  docker login -u $QUAY_USERNAME -p $QUAY_PASSWORD quay.io
++  docker login -u $ -p $GITHUB_TOKEN ghcr.io
+   docker push ${TAG}:${BUILD_ID}
+   docker push ${TAG}:${BUILD_ID2}
+   docker push ${TAG}:latest
+diff --git a/docker/build_scripts/build-cpython.sh b/docker/build_scripts/build-cpython.sh
+index ea7485a..38a5a93 100755
+--- a/docker/build_scripts/build-cpython.sh
++++ b/docker/build_scripts/build-cpython.sh
+@@ -35,11 +35,17 @@ mkdir -p ${PREFIX}/lib
+ CFLAGS_EXTRA=""
+ CONFIGURE_ARGS="--disable-shared --with-ensurepip=no"
+ 
+-if [ "${2:-}" == "nogil" ]; then
++if [ "${2:-}" == "nogil" -o "${3:-}" == "nogil" ]; then
+ 	PREFIX="${PREFIX}-nogil"
+ 	CONFIGURE_ARGS="${CONFIGURE_ARGS} --disable-gil"
+ fi
+ 
++if [ "${2:-}" == "shared" -o "${3:-}" == "shared" ]; then
++	PREFIX="${PREFIX}-shared"
++	CONFIGURE_ARGS="${CONFIGURE_ARGS} --enable-shared"
++	MANYLINUX_LDFLAGS="${MANYLINUX_LDFLAGS} -Wl,-rpath,'\$\$ORIGIN/../lib'"
++fi
++
+ if [ "${CPYTHON_VERSION}" == "3.6.15" ]; then
+ 	# https://github.com/python/cpython/issues/89863
+ 	# gcc-12+ uses these 2 flags in -O2 but they were only enabled in -O3 with gcc-11
+@@ -79,3 +85,6 @@ clean_pyc ${PREFIX}
+ 
+ # Strip ELF files found in ${PREFIX}
+ strip_ ${PREFIX}
++
++# Test that python is functioning
++${PREFIX}/bin/python3 -c "pass"
+diff --git a/docker/build_scripts/finalize-one.sh b/docker/build_scripts/finalize-one.sh
+index 94bb921..3af3ff4 100755
+--- a/docker/build_scripts/finalize-one.sh
++++ b/docker/build_scripts/finalize-one.sh
+@@ -16,6 +16,9 @@ fi
+ PY_VER=$(${PREFIX}/bin/python -c "import sys; print('.'.join(str(v) for v in sys.version_info[:2]))")
+ PY_IMPL=$(${PREFIX}/bin/python -c "import sys; print(sys.implementation.name)")
+ PY_GIL=$(${PREFIX}/bin/python -c "import sysconfig; print('t' if sysconfig.get_config_vars().get('Py_GIL_DISABLED', 0) else '')")
++if [[ "${PREFIX}" == *"-shared"* ]]; then
++	PY_SHARED="-shared"
++fi
+ 
+ # disable some pip warnings
+ export PIP_ROOT_USER_ACTION=ignore
+@@ -27,9 +30,6 @@ if [ "${PY_IMPL}" == "graalpy" ]; then
+ 	# GraalPy doesn't update pip/setuptools because it uses a patched version of pip/setuptools
+ 	${PREFIX}/bin/python -m ensurepip --default-pip
+ 	${PREFIX}/bin/python -m pip install -U --require-hashes -r ${MY_DIR}/requirements${PY_VER}.txt
+-elif [ -f /usr/local/bin/python${PY_VER} ]; then
+-	# Use the already intsalled cpython pip to bootstrap pip if available
+-	/usr/local/bin/python${PY_VER} -m pip --python ${PREFIX}/bin/python install -U --require-hashes -r ${MY_DIR}/requirements${PY_VER}.txt
+ else
+ 	${PREFIX}/bin/python -m ensurepip
+ 	${PREFIX}/bin/python -m pip install -U --require-hashes -r ${MY_DIR}/requirements${PY_VER}.txt
+@@ -39,9 +39,11 @@ if [ -e ${PREFIX}/bin/pip3 ] && [ ! -e ${PREFIX}/bin/pip ]; then
+ fi
+ # Create a symlink to PREFIX using the ABI_TAG in /opt/python/
+ ABI_TAG=$(${PREFIX}/bin/python ${MY_DIR}/python-tag-abi-tag.py)
+-ln -s ${PREFIX} /opt/python/${ABI_TAG}
++ln -s ${PREFIX} /opt/python/${ABI_TAG}${PY_SHARED:-}
+ # Make versioned python commands available directly in environment.
+-if [[ "${PY_IMPL}" == "cpython" ]]; then
++if [ "${PY_IMPL}" == "cpython" -a -z "${PY_SHARED:-}" ]; then
+ 	ln -s ${PREFIX}/bin/python /usr/local/bin/python${PY_VER}${PY_GIL}
+ fi
+-ln -s ${PREFIX}/bin/python /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
++if [ -z "${PY_SHARED:-}" ]; then
++	ln -s ${PREFIX}/bin/python /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
++fi
+diff --git a/docker/build_scripts/manylinux-interpreters.py b/docker/build_scripts/manylinux-interpreters.py
+index e33b1e6..949df3a 100644
+--- a/docker/build_scripts/manylinux-interpreters.py
++++ b/docker/build_scripts/manylinux-interpreters.py
+@@ -28,7 +28,7 @@ def sort_key(tag):
+ 
+ @cache
+ def get_all_tags(no_check: bool = False):
+-    all_tags_ = set(p.name for p in INSTALL_DIR.iterdir() if p.is_dir())
++    all_tags_ = set(p.name for p in INSTALL_DIR.iterdir() if p.is_dir() and "-shared" not in p.name)
+     if POLICY.startswith("manylinux"):
+         all_tags_ |= set(tag for tag in PYTHON_TAGS if ARCH in PYTHON_TAGS[tag])
+     if no_check:
