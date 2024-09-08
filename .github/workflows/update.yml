@@ -55,6 +55,7 @@ jobs:
           git config --global user.email "supervisor@karellen.co"
           git config --global user.name "Karellen Supervisor"
 
+          git add \*
           git commit -a -m "Update $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
           git push --follow-tags
