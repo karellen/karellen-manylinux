@@ -1,4 +1,4 @@
-name: karellen-sysbox-update
+name: karellen-manylinux-update
 on:
   schedule:
     - cron: "0 */1 * * *"
