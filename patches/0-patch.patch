@@ -124,3 +124,17 @@ index e33b1e6..949df3a 100644
      if POLICY.startswith("manylinux"):
          all_tags_ |= set(tag for tag in PYTHON_TAGS if ARCH in PYTHON_TAGS[tag])
      if no_check:
+diff --git a/tests/run_tests.sh b/tests/run_tests.sh
+index b1777b9..9f09ec5 100755
+--- a/tests/run_tests.sh
++++ b/tests/run_tests.sh
+@@ -54,6 +54,9 @@ fi
+ 
+ PYTHON_COUNT=0
+ for PYTHON in /opt/python/*/bin/python; do
++	if [[ "$PYTHON" == /opt/python/*-shared*/bin/python ]]; then
++		continue
++	fi
+ 	# Smoke test to make sure that our Pythons work, and do indeed detect as
+ 	# being manylinux compatible:
+ 	$PYTHON $MY_DIR/manylinux-check.py ${AUDITWHEEL_POLICY} ${AUDITWHEEL_ARCH}
