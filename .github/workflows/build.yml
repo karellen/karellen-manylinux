@@ -48,7 +48,6 @@ jobs:
       - name: Patch
         run: |
           ./patch.sh
-
           echo "COMMIT_SHA=$(git rev-parse HEAD:manylinux)" >> $GITHUB_ENV
 
       - name: Set up emulation
@@ -64,7 +63,7 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || fromJSON(github.event.inputs.useCache)
         uses: actions/cache/restore@v4
         with:
-          path: .buildx-cache-${{ matrix.policy }}_${{ matrix.platform }}/*
+          path: manylinux/.buildx-cache-${{ matrix.policy }}_${{ matrix.platform }}/*
           key: buildx-cache-${{ matrix.policy }}-${{ matrix.platform }}
 
       - name: Build
@@ -85,7 +84,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/cache/save@v4
         with:
-          path: .buildx-cache-${{ matrix.policy }}_${{ matrix.platform }}/*
+          path: manylinux/.buildx-cache-${{ matrix.policy }}_${{ matrix.platform }}/*
           key: buildx-cache-${{ matrix.policy }}-${{ matrix.platform }}
 
       - name: Deploy
