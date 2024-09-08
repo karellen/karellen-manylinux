@@ -42,6 +42,7 @@ index 7364c19..3cda5c4 100644
 +      - name: Patch
 +        run: |
 +          ./patch.sh
++
 +          echo "COMMIT_SHA=$(git rev-parse HEAD:manylinux)" >> $GITHUB_ENV
  
        - name: Set up emulation
