@@ -48,8 +48,8 @@ jobs:
       - name: Patch
         run: |
           ./patch.sh
-          cd manylinux
-          echo "COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+          echo "COMMIT_SHA=$(git rev-parse HEAD:manylinux)" >> $GITHUB_ENV
 
       - name: Set up emulation
         if: matrix.platform != 'i686' && matrix.platform != 'x86_64'
