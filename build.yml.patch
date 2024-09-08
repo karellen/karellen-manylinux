@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index 7364c19..3cda5c4 100644
+index 7364c19..a86021a 100644
 --- a/.github/workflows/build.yml
 +++ b/.github/workflows/build.yml
 @@ -9,19 +9,7 @@ on:
@@ -47,7 +47,7 @@ index 7364c19..3cda5c4 100644
  
        - name: Set up emulation
          if: matrix.platform != 'i686' && matrix.platform != 'x86_64'
-@@ -70,13 +68,16 @@ jobs:
+@@ -70,29 +68,34 @@ jobs:
            key: buildx-cache-${{ matrix.policy }}-${{ matrix.platform }}
  
        - name: Build
@@ -57,7 +57,8 @@ index 7364c19..3cda5c4 100644
 +          ./build.sh
  
        - name: Delete cache
-         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
++        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
          run: |
            KEY="buildx-cache-${{ matrix.policy }}-${{ matrix.platform }}"
            gh cache delete ${KEY} || true
@@ -65,11 +66,18 @@ index 7364c19..3cda5c4 100644
          env:
            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
  
-@@ -89,10 +90,12 @@ jobs:
+       - name: Save cache
+-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
++        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+         uses: actions/cache/save@v4
+         with:
+           path: .buildx-cache-${{ matrix.policy }}_${{ matrix.platform }}/*
+           key: buildx-cache-${{ matrix.policy }}-${{ matrix.platform }}
  
        - name: Deploy
-         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'pypa/manylinux'
+-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'pypa/manylinux'
 -        run: ./deploy.sh
++        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'karellen/karellen-manylinux'
 +        run: |
 +          cd manylinux
 +          ./deploy.sh
