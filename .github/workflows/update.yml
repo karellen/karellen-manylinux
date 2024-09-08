@@ -42,15 +42,15 @@ jobs:
               fi
           done <<< "$(git submodule status)"
 
-          if [ -z "$MODULES_CHANGED" ]; then
-              echo "# No submodules changed detected - exiting!" >> $GITHUB_STEP_SUMMARY
-              exit 0
-          fi
-
           git submodule sync --recursive
           git submodule update --init --remote --recursive
 
           ./patch_build_yml.sh
+
+          if [ -z "$MODULES_CHANGED" -a -z "$(git status --porcelain)" ]; then
+              echo "# No submodule or other changed detected - exiting!" >> $GITHUB_STEP_SUMMARY
+              exit 0
+          fi
 
           git config --global user.email "supervisor@karellen.co"
           git config --global user.name "Karellen Supervisor"
