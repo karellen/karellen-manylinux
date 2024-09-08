@@ -9,12 +9,12 @@ jobs:
     timeout-minutes: 600
     continue-on-error: false
     env:
-      GH_TOKEN: ${{ secrets.PAT_TOKEN }}
       SEGMENT_DOWNLOAD_TIMEOUT_MINS: 60
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
       - name: Check Updates
         shell: bash
         run: |
