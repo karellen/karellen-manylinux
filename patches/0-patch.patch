@@ -121,7 +121,7 @@ index 94bb921..3af3ff4 100755
 +	ln -s ${PREFIX}/bin/python /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
 +fi
 diff --git a/docker/build_scripts/install-runtime-packages.sh b/docker/build_scripts/install-runtime-packages.sh
-index 402021a..10e787a 100755
+index 402021a..ee90d10 100755
 --- a/docker/build_scripts/install-runtime-packages.sh
 +++ b/docker/build_scripts/install-runtime-packages.sh
 @@ -56,7 +56,7 @@ else
@@ -133,12 +133,28 @@ index 402021a..10e787a 100755
  if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
  	PACKAGE_MANAGER=yum
  	BASETOOLS="${BASETOOLS} hardlink hostname which"
-@@ -97,7 +97,7 @@ elif [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
+@@ -69,14 +69,12 @@ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
+ 	fixup-mirrors
+ 	yum -y update
+ 	fixup-mirrors
+-	yum -y install yum-utils curl
++	yum -y install yum-utils curl epel-release
+ 	yum-config-manager --enable extras
+ 	TOOLCHAIN_DEPS="devtoolset-10-binutils devtoolset-10-gcc devtoolset-10-gcc-c++ devtoolset-10-gcc-gfortran"
+ 	if [ "${AUDITWHEEL_ARCH}" == "x86_64" ]; then
+ 		# Software collection (for devtoolset-10)
+ 		yum -y install centos-release-scl-rh
+-		# EPEL support (for yasm)
+-		yum -y install https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
+ 		TOOLCHAIN_DEPS="${TOOLCHAIN_DEPS} yasm"
+ 	elif [ "${AUDITWHEEL_ARCH}" == "aarch64" ] || [ "${AUDITWHEEL_ARCH}" == "ppc64le" ] || [ "${AUDITWHEEL_ARCH}" == "s390x" ]; then
+ 		# Software collection (for devtoolset-10)
+@@ -97,7 +95,7 @@ elif [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
  	# Make sure that locale will not be removed
  	sed -i '/^override_install_langs=/d' /etc/yum.conf
  	dnf -y upgrade
 -	dnf -y install dnf-plugins-core
-+	dnf -y install dnf-plugins-core https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
++	dnf -y install dnf-plugins-core epel-release
  	dnf config-manager --set-enabled powertools # for yasm
  	TOOLCHAIN_DEPS="gcc-toolset-12-binutils gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-gcc-gfortran"
  	if [ "${AUDITWHEEL_ARCH}" == "x86_64" ]; then
