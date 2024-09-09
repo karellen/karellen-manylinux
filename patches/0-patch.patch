@@ -121,7 +121,7 @@ index 94bb921..3af3ff4 100755
 +	ln -s ${PREFIX}/bin/python /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
 +fi
 diff --git a/docker/build_scripts/install-runtime-packages.sh b/docker/build_scripts/install-runtime-packages.sh
-index 402021a..ee90d10 100755
+index 402021a..9218689 100755
 --- a/docker/build_scripts/install-runtime-packages.sh
 +++ b/docker/build_scripts/install-runtime-packages.sh
 @@ -56,7 +56,7 @@ else
@@ -133,23 +133,27 @@ index 402021a..ee90d10 100755
  if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
  	PACKAGE_MANAGER=yum
  	BASETOOLS="${BASETOOLS} hardlink hostname which"
-@@ -69,14 +69,12 @@ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
- 	fixup-mirrors
- 	yum -y update
- 	fixup-mirrors
--	yum -y install yum-utils curl
-+	yum -y install yum-utils curl epel-release
- 	yum-config-manager --enable extras
+@@ -74,14 +74,15 @@ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
  	TOOLCHAIN_DEPS="devtoolset-10-binutils devtoolset-10-gcc devtoolset-10-gcc-c++ devtoolset-10-gcc-gfortran"
  	if [ "${AUDITWHEEL_ARCH}" == "x86_64" ]; then
  		# Software collection (for devtoolset-10)
- 		yum -y install centos-release-scl-rh
+-		yum -y install centos-release-scl-rh
 -		# EPEL support (for yasm)
 -		yum -y install https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
++		yum -y install centos-release-scl-rh epel-release
  		TOOLCHAIN_DEPS="${TOOLCHAIN_DEPS} yasm"
  	elif [ "${AUDITWHEEL_ARCH}" == "aarch64" ] || [ "${AUDITWHEEL_ARCH}" == "ppc64le" ] || [ "${AUDITWHEEL_ARCH}" == "s390x" ]; then
  		# Software collection (for devtoolset-10)
-@@ -97,7 +95,7 @@ elif [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
+-		yum -y install centos-release-scl-rh
++		yum -y install centos-release-scl-rh epel-release
+ 	elif [ "${AUDITWHEEL_ARCH}" == "i686" ]; then
++		# No epel-release
++		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -x - -C /usr
++		BASETOOLS="$(echo -n ${BASETOOLS} | sed 's/patchelf//')"
+ 		# No yasm on i686
+ 		# Install mayeut/devtoolset-10 repo to get devtoolset-10
+ 		curl -fsSLo /etc/yum.repos.d/mayeut-devtoolset-10.repo https://copr.fedorainfracloud.org/coprs/mayeut/devtoolset-10/repo/custom-1/mayeut-devtoolset-10-custom-1.repo
+@@ -97,7 +98,7 @@ elif [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
  	# Make sure that locale will not be removed
  	sed -i '/^override_install_langs=/d' /etc/yum.conf
  	dnf -y upgrade
