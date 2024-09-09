@@ -148,7 +148,7 @@ index 402021a..9218689 100755
 +		yum -y install centos-release-scl-rh epel-release
  	elif [ "${AUDITWHEEL_ARCH}" == "i686" ]; then
 +		# No epel-release
-+		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -x - -C /usr
++		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -xz - -C /usr
 +		BASETOOLS="$(echo -n ${BASETOOLS} | sed 's/patchelf//')"
  		# No yasm on i686
  		# Install mayeut/devtoolset-10 repo to get devtoolset-10
