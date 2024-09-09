@@ -21,7 +21,7 @@ index e663cce..341d3f9 100755
  if [ ${USE_LOCAL_CACHE} -ne 0 ]; then
  	if [ -d $(pwd)/.buildx-cache-${POLICY}_${PLATFORM} ]; then
 diff --git a/deploy.sh b/deploy.sh
-index d59ae7b..dda6960 100755
+index d59ae7b..b76ec6d 100755
 --- a/deploy.sh
 +++ b/deploy.sh
 @@ -11,7 +11,7 @@ fi
@@ -43,10 +43,10 @@ index d59ae7b..dda6960 100755
    docker push ${TAG}:${BUILD_ID2}
    docker push ${TAG}:latest
 diff --git a/docker/build_scripts/build-cpython.sh b/docker/build_scripts/build-cpython.sh
-index ea7485a..38a5a93 100755
+index ea7485a..dd046f6 100755
 --- a/docker/build_scripts/build-cpython.sh
 +++ b/docker/build_scripts/build-cpython.sh
-@@ -35,11 +35,17 @@ mkdir -p ${PREFIX}/lib
+@@ -35,11 +35,16 @@ mkdir -p ${PREFIX}/lib
  CFLAGS_EXTRA=""
  CONFIGURE_ARGS="--disable-shared --with-ensurepip=no"
  
@@ -59,13 +59,22 @@ index ea7485a..38a5a93 100755
 +if [ "${2:-}" == "shared" -o "${3:-}" == "shared" ]; then
 +	PREFIX="${PREFIX}-shared"
 +	CONFIGURE_ARGS="${CONFIGURE_ARGS} --enable-shared"
-+	MANYLINUX_LDFLAGS="${MANYLINUX_LDFLAGS} -Wl,-rpath,'\$\$ORIGIN/../lib'"
 +fi
 +
  if [ "${CPYTHON_VERSION}" == "3.6.15" ]; then
  	# https://github.com/python/cpython/issues/89863
  	# gcc-12+ uses these 2 flags in -O2 but they were only enabled in -O3 with gcc-11
-@@ -79,3 +85,6 @@ clean_pyc ${PREFIX}
+@@ -66,6 +71,9 @@ fi
+ 	LDFLAGS_NODIST="${MANYLINUX_LDFLAGS}" \
+ 	--prefix=${PREFIX} ${CONFIGURE_ARGS} > /dev/null
+ make > /dev/null
++if [ "${2:-}" == "shared" -o "${3:-}" == "shared" ]; then
++	patchelf --force-rpath --set-rpath '$ORIGIN/../lib' /Python-${CPYTHON_VERSION}/python
++fi
+ make install > /dev/null
+ popd
+ rm -rf Python-${CPYTHON_VERSION} Python-${CPYTHON_VERSION}.tgz Python-${CPYTHON_VERSION}.tgz.asc
+@@ -79,3 +87,6 @@ clean_pyc ${PREFIX}
  
  # Strip ELF files found in ${PREFIX}
  strip_ ${PREFIX}
@@ -111,6 +120,28 @@ index 94bb921..3af3ff4 100755
 +if [ -z "${PY_SHARED:-}" ]; then
 +	ln -s ${PREFIX}/bin/python /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
 +fi
+diff --git a/docker/build_scripts/install-runtime-packages.sh b/docker/build_scripts/install-runtime-packages.sh
+index 402021a..10e787a 100755
+--- a/docker/build_scripts/install-runtime-packages.sh
++++ b/docker/build_scripts/install-runtime-packages.sh
+@@ -56,7 +56,7 @@ else
+ 	exit 1
+ fi
+ 
+-BASETOOLS="autoconf automake bison bzip2 diffutils file make patch unzip"
++BASETOOLS="autoconf automake bison bzip2 diffutils file make patch unzip patchelf"
+ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
+ 	PACKAGE_MANAGER=yum
+ 	BASETOOLS="${BASETOOLS} hardlink hostname which"
+@@ -97,7 +97,7 @@ elif [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
+ 	# Make sure that locale will not be removed
+ 	sed -i '/^override_install_langs=/d' /etc/yum.conf
+ 	dnf -y upgrade
+-	dnf -y install dnf-plugins-core
++	dnf -y install dnf-plugins-core https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+ 	dnf config-manager --set-enabled powertools # for yasm
+ 	TOOLCHAIN_DEPS="gcc-toolset-12-binutils gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-gcc-gfortran"
+ 	if [ "${AUDITWHEEL_ARCH}" == "x86_64" ]; then
 diff --git a/docker/build_scripts/manylinux-interpreters.py b/docker/build_scripts/manylinux-interpreters.py
 index e33b1e6..949df3a 100644
 --- a/docker/build_scripts/manylinux-interpreters.py
