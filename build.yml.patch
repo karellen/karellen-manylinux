@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index 7364c19..e9ea8d5 100644
+index 7364c19..6995e7d 100644
 --- a/.github/workflows/build.yml
 +++ b/.github/workflows/build.yml
 @@ -9,19 +9,9 @@ on:
@@ -24,10 +24,12 @@ index 7364c19..e9ea8d5 100644
  
  concurrency:
    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-@@ -31,16 +21,22 @@ jobs:
+@@ -30,17 +20,23 @@ concurrency:
+ jobs:
    build_manylinux:
      name: ${{ matrix.policy }}_${{ matrix.platform }}
-     runs-on: ubuntu-22.04
+-    runs-on: ubuntu-22.04
++    runs-on: self-hosted
 +    timeout-minutes: 1380
      permissions:
        actions: write # this permission is needed to delete cache
