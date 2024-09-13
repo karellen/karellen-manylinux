@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index 7364c19..6995e7d 100644
+index 7364c19..c05e850 100644
 --- a/.github/workflows/build.yml
 +++ b/.github/workflows/build.yml
 @@ -9,19 +9,9 @@ on:
@@ -50,7 +50,7 @@ index 7364c19..6995e7d 100644
  
      env:
        POLICY: ${{ matrix.policy }}
-@@ -52,6 +48,12 @@ jobs:
+@@ -52,12 +48,19 @@ jobs:
          uses: actions/checkout@v4
          with:
            fetch-depth: 50
@@ -63,7 +63,14 @@ index 7364c19..6995e7d 100644
  
        - name: Set up emulation
          if: matrix.platform != 'i686' && matrix.platform != 'x86_64'
-@@ -66,33 +68,38 @@ jobs:
+         uses: docker/setup-qemu-action@v3
+         with:
+           platforms: ${{ matrix.platform }}
++          image: tonistiigi/binfmt:qemu-v8.1.5
+ 
+       - name: Set up Docker Buildx
+         uses: docker/setup-buildx-action@v3
+@@ -66,33 +69,38 @@ jobs:
          if: github.event_name != 'workflow_dispatch' || fromJSON(github.event.inputs.useCache)
          uses: actions/cache/restore@v4
          with:
