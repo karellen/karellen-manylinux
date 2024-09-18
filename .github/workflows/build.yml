@@ -12,6 +12,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -19,7 +20,8 @@ concurrency:
 jobs:
   build_manylinux:
     name: ${{ matrix.policy }}_${{ matrix.platform }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    timeout-minutes: 1380
     permissions:
       actions: write # this permission is needed to delete cache
       packages: write
@@ -29,10 +31,12 @@ jobs:
       fail-fast: false
       matrix:
         policy: ["manylinux2014", "musllinux_1_1", "musllinux_1_2"]
-        platform: ["i686", "x86_64"]
+        platform: ["i686", "x86_64", "aarch64", "ppc64le", "s390x"]
         include:
           - policy: "manylinux_2_28"
             platform: "x86_64"
+          - policy: "manylinux_2_28"
+            platform: "aarch64"
 
     env:
       POLICY: ${{ matrix.policy }}
@@ -56,6 +60,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
         with:
           platforms: ${{ matrix.platform }}
+          image: ghcr.io/karellen/binfmt:qemu-v9.0.2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
