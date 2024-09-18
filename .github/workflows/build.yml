@@ -20,7 +20,7 @@ concurrency:
 jobs:
   build_manylinux:
     name: ${{ matrix.policy }}_${{ matrix.platform }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 1380
     permissions:
       actions: write # this permission is needed to delete cache
