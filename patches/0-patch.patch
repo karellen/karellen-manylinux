@@ -82,7 +82,7 @@ index ea7485a..8749ba7 100755
 +# Test that python is functioning
 +${PREFIX}/bin/python3 -c "pass"
 diff --git a/docker/build_scripts/finalize-one.sh b/docker/build_scripts/finalize-one.sh
-index 197ffcc..cee149d 100755
+index 197ffcc..a794564 100755
 --- a/docker/build_scripts/finalize-one.sh
 +++ b/docker/build_scripts/finalize-one.sh
 @@ -16,6 +16,9 @@ fi
@@ -95,7 +95,17 @@ index 197ffcc..cee149d 100755
  
  # disable some pip warnings
  export PIP_ROOT_USER_ACTION=ignore
-@@ -39,15 +42,17 @@ if [ -e ${PREFIX}/bin/pip3 ] && [ ! -e ${PREFIX}/bin/pip ]; then
+@@ -27,9 +30,6 @@ if [ "${PY_IMPL}" == "graalpy" ]; then
+ 	# GraalPy doesn't update pip/setuptools because it uses a patched version of pip/setuptools
+ 	${PREFIX}/bin/python -m ensurepip --default-pip
+ 	${PREFIX}/bin/python -m pip install -U --require-hashes -r ${MY_DIR}/requirements${PY_VER}.txt
+-elif [ -f /usr/local/bin/cpython${PY_VER} ]; then
+-	# Use the already intsalled cpython pip to bootstrap pip if available
+-	/usr/local/bin/cpython${PY_VER} -m pip --python ${PREFIX}/bin/python install -U --require-hashes -r ${MY_DIR}/requirements${PY_VER}.txt
+ else
+ 	${PREFIX}/bin/python -m ensurepip
+ 	${PREFIX}/bin/python -m pip install -U --require-hashes -r ${MY_DIR}/requirements${PY_VER}.txt
+@@ -39,15 +39,17 @@ if [ -e ${PREFIX}/bin/pip3 ] && [ ! -e ${PREFIX}/bin/pip ]; then
  fi
  # Create a symlink to PREFIX using the ABI_TAG in /opt/python/
  ABI_TAG=$(${PREFIX}/bin/python ${MY_DIR}/python-tag-abi-tag.py)
