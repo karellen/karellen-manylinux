@@ -129,7 +129,7 @@ index 197ffcc..a794564 100755
  	ln -s ${PY_IMPL}${PY_VER}${PY_GIL} /usr/local/bin/python${PY_VER}${PY_GIL}
  fi
 diff --git a/docker/build_scripts/install-runtime-packages.sh b/docker/build_scripts/install-runtime-packages.sh
-index 402021a..61f0edc 100755
+index 160b335..401fb16 100755
 --- a/docker/build_scripts/install-runtime-packages.sh
 +++ b/docker/build_scripts/install-runtime-packages.sh
 @@ -56,7 +56,7 @@ else
@@ -141,14 +141,7 @@ index 402021a..61f0edc 100755
  if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
  	PACKAGE_MANAGER=yum
  	BASETOOLS="${BASETOOLS} hardlink hostname which"
-@@ -74,14 +74,15 @@ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
- 	TOOLCHAIN_DEPS="devtoolset-10-binutils devtoolset-10-gcc devtoolset-10-gcc-c++ devtoolset-10-gcc-gfortran"
- 	if [ "${AUDITWHEEL_ARCH}" == "x86_64" ]; then
- 		# Software collection (for devtoolset-10)
--		yum -y install centos-release-scl-rh
--		# EPEL support (for yasm)
--		yum -y install https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
-+		yum -y install centos-release-scl-rh epel-release
+@@ -95,8 +95,11 @@ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
  		TOOLCHAIN_DEPS="${TOOLCHAIN_DEPS} yasm"
  	elif [ "${AUDITWHEEL_ARCH}" == "aarch64" ] || [ "${AUDITWHEEL_ARCH}" == "ppc64le" ] || [ "${AUDITWHEEL_ARCH}" == "s390x" ]; then
  		# Software collection (for devtoolset-10)
@@ -161,14 +154,14 @@ index 402021a..61f0edc 100755
  		# No yasm on i686
  		# Install mayeut/devtoolset-10 repo to get devtoolset-10
  		curl -fsSLo /etc/yum.repos.d/mayeut-devtoolset-10.repo https://copr.fedorainfracloud.org/coprs/mayeut/devtoolset-10/repo/custom-1/mayeut-devtoolset-10-custom-1.repo
-@@ -97,7 +98,7 @@ elif [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
- 	# Make sure that locale will not be removed
- 	sed -i '/^override_install_langs=/d' /etc/yum.conf
+@@ -107,7 +110,7 @@ elif [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
+ 	BASETOOLS="${BASETOOLS} curl glibc-locale-source glibc-langpack-en hardlink hostname libcurl libnsl libxcrypt which"
+ 	echo "tsflags=nodocs" >> /etc/dnf/dnf.conf
  	dnf -y upgrade
 -	dnf -y install dnf-plugins-core
 +	dnf -y install dnf-plugins-core epel-release
  	dnf config-manager --set-enabled powertools # for yasm
- 	TOOLCHAIN_DEPS="gcc-toolset-12-binutils gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-gcc-gfortran"
+ 	TOOLCHAIN_DEPS="gcc-toolset-13-binutils gcc-toolset-13-gcc gcc-toolset-13-gcc-c++ gcc-toolset-13-gcc-gfortran"
  	if [ "${AUDITWHEEL_ARCH}" == "x86_64" ]; then
 diff --git a/docker/build_scripts/manylinux-interpreters.py b/docker/build_scripts/manylinux-interpreters.py
 index e33b1e6..949df3a 100644
