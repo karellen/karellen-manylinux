@@ -136,8 +136,8 @@ index 160b335..401fb16 100755
  	exit 1
  fi
  
--BASETOOLS="autoconf automake bison bzip2 diffutils file make patch unzip"
-+BASETOOLS="autoconf automake bison bzip2 diffutils file make patch unzip patchelf"
+-BASETOOLS="autoconf automake bison bzip2 ca-certificates curl diffutils file make patch unzip"
++BASETOOLS="autoconf automake bison bzip2 ca-certificates curl diffutils file make patch unzip patchelf"
  if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
  	PACKAGE_MANAGER=yum
  	BASETOOLS="${BASETOOLS} hardlink hostname which"
@@ -154,15 +154,6 @@ index 160b335..401fb16 100755
  		# No yasm on i686
  		# Install mayeut/devtoolset-10 repo to get devtoolset-10
  		curl -fsSLo /etc/yum.repos.d/mayeut-devtoolset-10.repo https://copr.fedorainfracloud.org/coprs/mayeut/devtoolset-10/repo/custom-1/mayeut-devtoolset-10-custom-1.repo
-@@ -107,7 +110,7 @@ elif [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
- 	BASETOOLS="${BASETOOLS} curl glibc-locale-source glibc-langpack-en hardlink hostname libcurl libnsl libxcrypt which"
- 	echo "tsflags=nodocs" >> /etc/dnf/dnf.conf
- 	dnf -y upgrade
--	dnf -y install dnf-plugins-core
-+	dnf -y install dnf-plugins-core epel-release
- 	dnf config-manager --set-enabled powertools # for yasm
- 	TOOLCHAIN_DEPS="gcc-toolset-13-binutils gcc-toolset-13-gcc gcc-toolset-13-gcc-c++ gcc-toolset-13-gcc-gfortran"
- 	if [ "${AUDITWHEEL_ARCH}" == "x86_64" ]; then
 diff --git a/docker/build_scripts/manylinux-interpreters.py b/docker/build_scripts/manylinux-interpreters.py
 index e33b1e6..949df3a 100644
 --- a/docker/build_scripts/manylinux-interpreters.py
