@@ -1,8 +1,6 @@
-diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index 7364c19..0ab1ce1 100644
---- a/.github/workflows/build.yml
-+++ b/.github/workflows/build.yml
-@@ -9,20 +9,9 @@ on:
+--- a/.github/workflows/build.yml	2024-12-22 20:43:53.742261013 -0500
++++ b/.github/workflows/build.yml	2024-12-22 20:45:37.868820580 -0500
+@@ -9,20 +9,9 @@
          required: false
          default: true
    push:
@@ -25,7 +23,15 @@ index 7364c19..0ab1ce1 100644
  concurrency:
    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
    cancel-in-progress: true
-@@ -33,6 +22,9 @@ jobs:
+@@ -36,7 +25,6 @@
+       - uses: actions/setup-python@v5
+         with:
+           python-version: "3.x"
+-      - uses: pre-commit/action@v3.0.1
+ 
+   build_manylinux:
+     needs: [pre_commit]
+@@ -44,6 +32,9 @@
      runs-on: ubuntu-22.04
      permissions:
        actions: write # this permission is needed to delete cache
@@ -35,7 +41,7 @@ index 7364c19..0ab1ce1 100644
      strategy:
        fail-fast: false
        matrix:
-@@ -52,6 +44,12 @@ jobs:
+@@ -64,6 +55,12 @@
          uses: actions/checkout@v4
          with:
            fetch-depth: 50
@@ -48,7 +54,7 @@ index 7364c19..0ab1ce1 100644
  
        - name: Set up emulation
          if: matrix.platform != 'i686' && matrix.platform != 'x86_64'
-@@ -66,33 +64,38 @@ jobs:
+@@ -78,33 +75,38 @@
          if: github.event_name != 'workflow_dispatch' || fromJSON(github.event.inputs.useCache)
          uses: actions/cache/restore@v4
          with:
