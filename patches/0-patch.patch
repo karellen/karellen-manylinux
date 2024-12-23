@@ -150,7 +150,7 @@ index 51df557..00dc30c 100755
  	elif [ "${AUDITWHEEL_ARCH}" == "i686" ]; then
 +		# No epel-release
 +		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -xzf - -C /usr
-+		BASE_TOOLS=( "${BASE_TOOLS[@]/patchelf}" )
++		BASE_TOOLS=( ${BASE_TOOLS[@]/patchelf} )
  		# No yasm on i686
  		# Install mayeut/devtoolset-10 repo to get devtoolset-10
  		curl -fsSLo /etc/yum.repos.d/mayeut-devtoolset-10.repo https://copr.fedorainfracloud.org/coprs/mayeut/devtoolset-10/repo/custom-1/mayeut-devtoolset-10-custom-1.repo
