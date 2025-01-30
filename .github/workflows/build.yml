@@ -82,6 +82,7 @@ jobs:
       - name: Start Docker
         run: |
           sudo systemctl start docker
+          while ! docker info; do sleep 1; done
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
