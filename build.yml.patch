@@ -1,5 +1,5 @@
 --- manylinux/.github/workflows/build.yml	2025-01-30 14:56:53.877719708 -0500
-+++ manylinux/.github/workflows/build.yml	2025-01-30 15:05:37.450530771 -0500
++++ .github/workflows/build.yml	2025-01-30 15:11:11.558781806 -0500
 @@ -9,20 +9,9 @@
          required: false
          default: true
@@ -54,7 +54,7 @@
 +
 +      - name: Start Docker
 +        run: |
-+          sudo systemctl start docker
++          while ! sudo systemctl start docker; do sudo systemctl status docker; sleep 1; done
 +          while ! docker info; do sleep 1; done
  
        - name: Set up Docker Buildx
