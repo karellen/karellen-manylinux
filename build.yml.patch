@@ -1,5 +1,5 @@
---- .github/workflows/build.yml	2025-01-30 14:56:53.877719708 -0500
-+++ .github/workflows/build.yml	2025-01-30 15:05:37.450530771 -0500
+--- manylinux/.github/workflows/build.yml	2025-01-30 14:56:53.877719708 -0500
++++ manylinux/.github/workflows/build.yml	2025-01-30 15:05:37.450530771 -0500
 @@ -9,20 +9,9 @@
          required: false
          default: true
