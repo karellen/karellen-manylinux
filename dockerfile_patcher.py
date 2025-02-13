@@ -10,7 +10,7 @@ new_lines = []
 for idx, line in enumerate(lines):
     if line.startswith("RUN manylinux-entrypoint /build_scripts/build-cpython.sh"):
         cpython_build_block = [line, ""]
-        if lines[-1].startswith("COPY"):
+        if lines[idx-1].startswith("COPY"):
             cpython_build_block.extend(lines[idx-2:idx+1])
         else:
             cpython_build_block.extend(lines[idx-1:idx+1])
