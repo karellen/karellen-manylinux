@@ -50,13 +50,13 @@ index 90f2400..38c8111 100755
  CFLAGS_EXTRA=""
  CONFIGURE_ARGS=(--disable-shared --with-ensurepip=no)
  
--if [ "${2:-}" == "nogil" ]; then
-+if [ "${2:-}" == "nogil" -o "${3:-}" == "nogil" ]; then
+-if [ "${4:-}" == "nogil" ]; then
++if [ "${4:-}" == "nogil" -o "${5:-}" == "nogil" ]; then
  	PREFIX="${PREFIX}-nogil"
  	CONFIGURE_ARGS+=(--disable-gil)
  fi
  
-+if [ "${2:-}" == "shared" -o "${3:-}" == "shared" ]; then
++if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
 +	PREFIX="${PREFIX}-shared"
 +	CONFIGURE_ARGS+=(--enable-shared)
 +fi
@@ -67,8 +67,8 @@ index 90f2400..38c8111 100755
 @@ -88,6 +93,9 @@ make > /dev/null
  make install > /dev/null
  popd
- rm -rf "Python-${CPYTHON_VERSION}" "Python-${CPYTHON_VERSION}.tgz" "Python-${CPYTHON_VERSION}.tgz.asc"
-+if [ "${2:-}" == "shared" -o "${3:-}" == "shared" ]; then
+ rm -rf "Python-${CPYTHON_VERSION}" "Python-${CPYTHON_VERSION}.tar.xz" "Python-${CPYTHON_VERSION}.tar.xz.sigstore"  "Python-${CPYTHON_VERSION}.tar.xz.asc"
++if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
 +	patchelf --force-rpath --set-rpath '$ORIGIN/../lib' "${PREFIX}/bin/python3"
 +fi
  
