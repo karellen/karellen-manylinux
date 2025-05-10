@@ -42,45 +42,6 @@ index deea740..96c4406 100755
    docker push "${TAG}:${BUILD_ID}"
    docker push "${TAG}:${BUILD_ID2}"
    docker push "${TAG}:latest"
-diff --git a/docker/build_scripts/build-cpython.sh b/docker/build_scripts/build-cpython.sh
-index 90f2400..38c8111 100755
---- a/docker/build_scripts/build-cpython.sh
-+++ b/docker/build_scripts/build-cpython.sh
-@@ -36,11 +36,16 @@ mkdir -p "${PREFIX}/lib"
- CFLAGS_EXTRA=""
- CONFIGURE_ARGS=(--disable-shared --with-ensurepip=no)
- 
--if [ "${4:-}" == "nogil" ]; then
-+if [ "${4:-}" == "nogil" -o "${5:-}" == "nogil" ]; then
- 	PREFIX="${PREFIX}-nogil"
- 	CONFIGURE_ARGS+=(--disable-gil)
- fi
- 
-+if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
-+	PREFIX="${PREFIX}-shared"
-+	CONFIGURE_ARGS+=(--enable-shared)
-+fi
-+
- if [ "${CPYTHON_VERSION}" == "3.6.15" ]; then
- 	# https://github.com/python/cpython/issues/89863
- 	# gcc-12+ uses these 2 flags in -O2 but they were only enabled in -O3 with gcc-11
-@@ -88,6 +93,9 @@ make > /dev/null
- make install > /dev/null
- popd
- rm -rf "Python-${CPYTHON_VERSION}" "Python-${CPYTHON_VERSION}.tar.xz" "Python-${CPYTHON_VERSION}.tar.xz.sigstore"  "Python-${CPYTHON_VERSION}.tar.xz.asc"
-+if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
-+	patchelf --force-rpath --set-rpath '$ORIGIN/../lib' "${PREFIX}/bin/python3"
-+fi
- 
- if [ "${OPENSSL_PREFIX}" != "" ]; then
- 	rm -rf "${OPENSSL_PREFIX:?}/bin" "${OPENSSL_PREFIX}/include" "${OPENSSL_PREFIX}/lib/pkgconfig" "${OPENSSL_PREFIX}/lib/*.so"
-@@ -98,3 +106,6 @@ clean_pyc "${PREFIX}"
- 
- # Strip ELF files found in ${PREFIX}
- strip_ "${PREFIX}"
-+
-+# Test that python is functioning
-+${PREFIX}/bin/python3 -c "pass"
 diff --git a/docker/build_scripts/finalize-one.sh b/docker/build_scripts/finalize-one.sh
 index 4673bab..dbaee3c 100755
 --- a/docker/build_scripts/finalize-one.sh
@@ -181,3 +142,42 @@ index 39991f7..f602041 100755
  	# Smoke test to make sure that our Pythons work, and do indeed detect as
  	# being manylinux compatible:
  	$PYTHON "${MY_DIR}/manylinux-check.py" "${AUDITWHEEL_POLICY}" "${AUDITWHEEL_ARCH}"
+diff --git a/docker/build_scripts/build-cpython.sh b/docker/build_scripts/build-cpython.sh
+index 39e9972..17420f9 100755
+--- a/docker/build_scripts/build-cpython.sh
++++ b/docker/build_scripts/build-cpython.sh
+@@ -38,11 +38,16 @@ mkdir -p "${PREFIX}/lib"
+ CFLAGS_EXTRA=""
+ CONFIGURE_ARGS=(--disable-shared --with-ensurepip=no)
+ 
+-if [ "${4:-}" == "nogil" ]; then
++if [ "${4:-}" == "nogil" -o "${5:-}" == "nogil" ]; then
+ 	PREFIX="${PREFIX}-nogil"
+ 	CONFIGURE_ARGS+=(--disable-gil)
+ fi
+ 
++if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
++	PREFIX="${PREFIX}-shared"
++	CONFIGURE_ARGS+=(--enable-shared)
++fi
++
+ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ] ; then
+ 	# Python 3.11+
+ 	export TCLTK_LIBS="-ltk8.6 -ltcl8.6"
+@@ -87,6 +92,9 @@ make > /dev/null
+ make install > /dev/null
+ popd
+ rm -rf "Python-${CPYTHON_VERSION}" "Python-${CPYTHON_VERSION}.tar.xz" "Python-${CPYTHON_VERSION}.tar.xz.sigstore"
++if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
++	patchelf --force-rpath --set-rpath '$ORIGIN/../lib' "${PREFIX}/bin/python3"
++fi
+ 
+ if [ "${OPENSSL_PREFIX}" != "" ]; then
+ 	rm -rf "${OPENSSL_PREFIX:?}/bin" "${OPENSSL_PREFIX}/include" "${OPENSSL_PREFIX}/lib/pkgconfig" "${OPENSSL_PREFIX}/lib/*.so"
+@@ -97,3 +105,6 @@ clean_pyc "${PREFIX}"
+ 
+ # Strip ELF files found in ${PREFIX}
+ strip_ "${PREFIX}"
++
++# Test that python is functioning
++${PREFIX}/bin/python3 -c "pass"
