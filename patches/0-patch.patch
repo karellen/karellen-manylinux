@@ -1,25 +1,16 @@
 diff --git a/build.sh b/build.sh
-index aebf5cd..e20c771 100755
+index 1d57a30..ccdcacf 100755
 --- a/build.sh
 +++ b/build.sh
-@@ -60,7 +60,7 @@ BUILD_ARGS_COMMON=(
+@@ -67,7 +67,7 @@ export DEVTOOLSET_ROOTPATH
+ export PREPEND_PATH
+ export LD_LIBRARY_PATH_ARG
+ 
+-MANYLINUX_IMAGE="quay.io/pypa/${POLICY}_${PLATFORM}:${COMMIT_SHA}"
++MANYLINUX_IMAGE="ghcr.io/karellen/${POLICY}_${PLATFORM}:${COMMIT_SHA}"
+ 
+ BUILD_ARGS_COMMON=(
  	"--platform=linux/${GOARCH}"
- 	--build-arg POLICY --build-arg PLATFORM --build-arg BASEIMAGE
- 	--build-arg DEVTOOLSET_ROOTPATH --build-arg PREPEND_PATH --build-arg LD_LIBRARY_PATH_ARG
--	--rm -t "quay.io/pypa/${POLICY}_${PLATFORM}:${COMMIT_SHA}"
-+	--rm -t "ghcr.io/karellen/${POLICY}_${PLATFORM}:${COMMIT_SHA}"
- 	-f docker/Dockerfile docker/
- )
- 
-@@ -90,7 +90,7 @@ else
- 	exit 1
- fi
- 
--docker run --rm -v "$(pwd)/tests:/tests:ro" "quay.io/pypa/${POLICY}_${PLATFORM}:${COMMIT_SHA}" /tests/run_tests.sh
-+docker run --rm -v "$(pwd)/tests:/tests:ro" "ghcr.io/karellen/${POLICY}_${PLATFORM}:${COMMIT_SHA}" /tests/run_tests.sh
- 
- if [ ${USE_LOCAL_CACHE} -ne 0 ]; then
- 	if [ -d "$(pwd)/.buildx-cache-${POLICY}_${PLATFORM}" ]; then
 diff --git a/deploy.sh b/deploy.sh
 index deea740..96c4406 100755
 --- a/deploy.sh
@@ -130,8 +121,8 @@ index f3b5b52..9a2ce85 100644
      if no_check:
 diff --git a/tests/run_tests.sh b/tests/run_tests.sh
 index 39991f7..f602041 100755
---- a/tests/run_tests.sh
-+++ b/tests/run_tests.sh
+--- a/docker/tests/run_tests.sh
++++ b/docker/tests/run_tests.sh
 @@ -51,6 +51,9 @@ fi
  
  PYTHON_COUNT=0
