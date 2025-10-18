@@ -76,7 +76,7 @@ jobs:
           while ! docker info; do sleep 1; done
 
       - name: Set up QEMU
-        if: matrix.platform == 'riscv64'
+        if: matrix.platform == 'ppc64le' || matrix.platform == 'riscv64' || matrix.platform == 's390x'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
