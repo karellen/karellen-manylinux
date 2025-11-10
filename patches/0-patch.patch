@@ -124,42 +124,6 @@ index 39e9972..17420f9 100755
 +
 +# Test that python is functioning
 +${PREFIX}/bin/python3 -c "pass"
-diff --git a/docker/build_scripts/install-runtime-packages.sh b/docker/build_scripts/install-runtime-packages.sh
-index a057bb0..2320f96 100755
---- a/docker/build_scripts/install-runtime-packages.sh
-+++ b/docker/build_scripts/install-runtime-packages.sh
-@@ -71,7 +71,7 @@ else
- 	exit 1
- fi
- 
--BASE_TOOLS=(autoconf automake bison bzip2 ca-certificates curl diffutils file make patch unzip)
-+BASE_TOOLS=(autoconf automake bison bzip2 ca-certificates curl diffutils file make patch unzip patchelf)
- if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
- 	BASE_TOOLS+=(hardlink hostname which)
- 	# See https://unix.stackexchange.com/questions/41784/can-yum-express-a-preference-for-x86-64-over-i386-packages
-@@ -109,8 +109,11 @@ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
- 		TOOLCHAIN_DEPS+=(yasm)
- 	elif [ "${AUDITWHEEL_ARCH}" == "aarch64" ] || [ "${AUDITWHEEL_ARCH}" == "ppc64le" ] || [ "${AUDITWHEEL_ARCH}" == "s390x" ]; then
- 		# Software collection (for devtoolset-10)
--		yum -y install centos-release-scl-rh
-+		yum -y install centos-release-scl-rh epel-release
- 	elif [ "${AUDITWHEEL_ARCH}" == "i686" ]; then
-+		# No patchelf in repo
-+		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -xzf - -C /usr
-+		BASE_TOOLS=( ${BASE_TOOLS[@]/patchelf} )
- 		# No yasm on i686
- 		# Install mayeut/devtoolset-10 repo to get devtoolset-10
- 		curl -fsSLo /etc/yum.repos.d/mayeut-devtoolset-10.repo https://copr.fedorainfracloud.org/coprs/mayeut/devtoolset-10/repo/custom-1/mayeut-devtoolset-10-custom-1.repo
-@@ -123,6 +126,9 @@ elif [ "${OS_ID_LIKE}" == "rhel" ]; then
- 	EPEL=epel-release
- 	if [ "${AUDITWHEEL_ARCH}" == "i686" ]; then
- 		EPEL=
-+		# No patchelf in repo
-+		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -xzf - -C /usr
-+		BASE_TOOLS=( ${BASE_TOOLS[@]/patchelf} )
- 	fi
- 	dnf -y install dnf-plugins-core ${EPEL}
- 	if [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
 diff --git a/deploy.sh b/deploy.sh
 index 00d16fc..ff4fe61 100755
 --- a/deploy.sh
@@ -182,3 +146,47 @@ index 00d16fc..ff4fe61 100755
    docker push "${TAG}:${BUILD_ID}"
    docker push "${TAG}:latest"
  fi
+diff --git a/docker/build_scripts/install-runtime-packages.sh b/docker/build_scripts/install-runtime-packages.sh
+index f56cf8f..68273bb 100755
+--- a/docker/build_scripts/install-runtime-packages.sh
++++ b/docker/build_scripts/install-runtime-packages.sh
+@@ -71,7 +71,7 @@ else
+ 	exit 1
+ fi
+ 
+-BASE_TOOLS=(autoconf automake bison bzip2 ca-certificates curl diffutils file make patch unzip)
++BASE_TOOLS=(autoconf automake bison bzip2 ca-certificates curl diffutils file make patch unzip patchelf)
+ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
+ 	BASE_TOOLS+=(hardlink hostname which)
+ 	# See https://unix.stackexchange.com/questions/41784/can-yum-express-a-preference-for-x86-64-over-i386-packages
+@@ -101,15 +101,18 @@ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ]; then
+ 	TOOLCHAIN_DEPS=(devtoolset-10-binutils devtoolset-10-gcc devtoolset-10-gcc-c++ devtoolset-10-gcc-gfortran devtoolset-10-libatomic-devel)
+ 	if [ "${AUDITWHEEL_ARCH}" == "x86_64" ]; then
+ 		# Software collection (for devtoolset-10)
+-		yum -y install centos-release-scl-rh
++		yum -y install centos-release-scl-rh epel-release
+ 		if ! rpm -q epel-release-7-14.noarch; then
+ 			# EPEL support (for yasm)
+ 			yum -y install https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
+ 		fi
+ 	elif [ "${AUDITWHEEL_ARCH}" == "aarch64" ] || [ "${AUDITWHEEL_ARCH}" == "ppc64le" ] || [ "${AUDITWHEEL_ARCH}" == "s390x" ]; then
+ 		# Software collection (for devtoolset-10)
+-		yum -y install centos-release-scl-rh
++		yum -y install centos-release-scl-rh epel-release
+ 	elif [ "${AUDITWHEEL_ARCH}" == "i686" ]; then
++		# No patchelf in repo
++		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -xzf - -C /usr
++		BASE_TOOLS=( ${BASE_TOOLS[@]/patchelf} )
+ 		# Install mayeut/devtoolset-10 repo to get devtoolset-10
+ 		curl -fsSLo /etc/yum.repos.d/mayeut-devtoolset-10.repo https://copr.fedorainfracloud.org/coprs/mayeut/devtoolset-10/repo/custom-1/mayeut-devtoolset-10-custom-1.repo
+ 	fi
+@@ -121,6 +124,9 @@ elif [ "${OS_ID_LIKE}" == "rhel" ]; then
+ 	EPEL=epel-release
+ 	if [ "${AUDITWHEEL_ARCH}" == "i686" ] || [ "${AUDITWHEEL_ARCH}" == "riscv64" ]; then
+ 		EPEL=
++		# No patchelf in repo
++		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -xzf - -C /usr
++		BASE_TOOLS=( ${BASE_TOOLS[@]/patchelf} )
+ 	fi
+ 	dnf -y install dnf-plugins-core ${EPEL}
+ 	if [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
