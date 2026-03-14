@@ -1,6 +1,6 @@
---- a/.github/workflows/build.yml	2026-01-03 15:42:29.062440922 -0500
-+++ b/.github/workflows/build.yml	2026-01-03 15:49:20.512611149 -0500
-@@ -3,20 +3,9 @@
+--- a/.github/workflows/build.yml	2026-03-14 14:54:11.223624502 -0400
++++ b/.github/workflows/build.yml	2026-03-14 14:54:47.799283175 -0400
+@@ -3,19 +3,9 @@
  on:
    workflow_dispatch:
    push:
@@ -18,20 +18,29 @@
 -      - "docker/**"
 -      - "tests/**"
 -      - "*.sh"
--
 +    branches: [master]
+ 
  concurrency:
    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-   cancel-in-progress: true
-@@ -36,7 +25,6 @@
+@@ -36,7 +26,7 @@
        - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
          with:
            python-version: "3.x"
 -      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
++
  
    build_matrix:
      name: Build matrix
-@@ -55,10 +43,6 @@
+@@ -44,7 +34,7 @@
+     runs-on: ubuntu-latest
+     outputs:
+       matrix: ${{ steps.matrix.outputs.matrix }}
+-      environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'pypa/manylinux') && 'quay.io' || '' }}
++      environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'karellen/karellen-manylinux') && 'ghcr.io' || '' }}
+     steps:
+       - id: matrix
+         name: build matrix
+@@ -56,10 +46,7 @@
                ("x86_64", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
                ("aarch64", "ubuntu-24.04-arm", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "manylinux_2_39", "musllinux_1_2")),
                ("i686", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
@@ -39,10 +48,11 @@
 -              ("ppc64le", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
 -              ("riscv64", "ubuntu-24.04", ("manylinux_2_39", "musllinux_1_2")),
 -              ("s390x", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
++
            ]
            expanded = [{"policy": policy, "platform": platform, "runner": runner} for platform, runner, policies in reduced for policy in policies]
            print(json.dumps(expanded, indent=2))
-@@ -87,6 +71,17 @@
+@@ -89,6 +76,17 @@
          with:
            fetch-depth: 50
            persist-credentials: false
@@ -60,7 +70,7 @@
  
        - name: Set up QEMU
          if: matrix.platform == 'ppc64le' || matrix.platform == 'riscv64' || matrix.platform == 's390x'
-@@ -96,7 +91,7 @@
+@@ -98,7 +96,7 @@
          uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
  
        - name: Login to GitHub Container Registry
@@ -69,7 +79,7 @@
          uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
          with:
            registry: ghcr.io
-@@ -104,14 +99,18 @@
+@@ -106,14 +104,18 @@
            password: ${{ secrets.GITHUB_TOKEN }}
  
        - name: Build
@@ -79,9 +89,9 @@
 +          ./build.sh
  
        - name: Deploy
--        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'pypa/manylinux'
+-        if: needs.build_matrix.outputs.environment == 'quay.io'
 -        run: ./deploy.sh
-+        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'karellen/karellen-manylinux'
++        if: needs.build_matrix.outputs.environment == 'ghcr.io'
 +        run: |
 +          cd manylinux
 +          ./deploy.sh
