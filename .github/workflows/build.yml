@@ -27,7 +27,6 @@ jobs:
         with:
           python-version: "3.x"
 
-
   build_matrix:
     name: Build matrix
     needs: pre_commit
@@ -46,7 +45,6 @@ jobs:
               ("x86_64", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
               ("aarch64", "ubuntu-24.04-arm", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "manylinux_2_39", "musllinux_1_2")),
               ("i686", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
-
           ]
           expanded = [{"policy": policy, "platform": platform, "runner": runner} for platform, runner, policies in reduced for policy in policies]
           print(json.dumps(expanded, indent=2))
@@ -89,7 +87,7 @@ jobs:
           while ! docker info; do sleep 1; done
 
       - name: Set up QEMU
-        if: matrix.platform == 'ppc64le' || matrix.platform == 'riscv64' || matrix.platform == 's390x'
+        if: matrix.platform == 'loongarch64' || matrix.platform == 'ppc64le' || matrix.platform == 'riscv64' || matrix.platform == 's390x'
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
 
       - name: Set up Docker Buildx

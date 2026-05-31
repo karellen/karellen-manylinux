@@ -1,5 +1,5 @@
---- a/.github/workflows/build.yml	2026-03-14 14:54:11.223624502 -0400
-+++ b/.github/workflows/build.yml	2026-03-14 14:54:47.799283175 -0400
+--- a/.github/workflows/build.yml	2026-05-31 17:58:51.175977409 -0400
++++ b/.github/workflows/build.yml	2026-05-31 17:59:57.948408147 -0400
 @@ -3,19 +3,9 @@
  on:
    workflow_dispatch:
@@ -22,16 +22,15 @@
  
  concurrency:
    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-@@ -36,7 +26,7 @@
+@@ -36,7 +26,6 @@
        - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
          with:
            python-version: "3.x"
 -      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
-+
  
    build_matrix:
      name: Build matrix
-@@ -44,7 +34,7 @@
+@@ -44,7 +33,7 @@
      runs-on: ubuntu-latest
      outputs:
        matrix: ${{ steps.matrix.outputs.matrix }}
@@ -40,19 +39,19 @@
      steps:
        - id: matrix
          name: build matrix
-@@ -56,10 +46,7 @@
+@@ -56,11 +45,6 @@
                ("x86_64", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
                ("aarch64", "ubuntu-24.04-arm", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "manylinux_2_39", "musllinux_1_2")),
                ("i686", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
 -              ("armv7l", "ubuntu-24.04-arm", ("manylinux_2_31", "manylinux_2_35", "musllinux_1_2")),
 -              ("ppc64le", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
+-              # ("loongarch64", "ubuntu-24.04", ("manylinux_2_38", "musllinux_1_2")),
 -              ("riscv64", "ubuntu-24.04", ("manylinux_2_39", "musllinux_1_2")),
 -              ("s390x", "ubuntu-24.04", ("manylinux2014", "manylinux_2_28", "manylinux_2_34", "musllinux_1_2")),
-+
            ]
            expanded = [{"policy": policy, "platform": platform, "runner": runner} for platform, runner, policies in reduced for policy in policies]
            print(json.dumps(expanded, indent=2))
-@@ -89,6 +76,17 @@
+@@ -90,6 +74,17 @@
          with:
            fetch-depth: 50
            persist-credentials: false
@@ -69,8 +68,8 @@
 +          while ! docker info; do sleep 1; done
  
        - name: Set up QEMU
-         if: matrix.platform == 'ppc64le' || matrix.platform == 'riscv64' || matrix.platform == 's390x'
-@@ -98,7 +96,7 @@
+         if: matrix.platform == 'loongarch64' || matrix.platform == 'ppc64le' || matrix.platform == 'riscv64' || matrix.platform == 's390x'
+@@ -99,7 +94,7 @@
          uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
  
        - name: Login to GitHub Container Registry
@@ -79,7 +78,7 @@
          uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
          with:
            registry: ghcr.io
-@@ -106,14 +104,18 @@
+@@ -107,14 +102,18 @@
            password: ${{ secrets.GITHUB_TOKEN }}
  
        - name: Build
