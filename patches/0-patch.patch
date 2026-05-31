@@ -1,129 +1,16 @@
 diff --git a/build.sh b/build.sh
-index 1d57a30..ccdcacf 100755
+index f40a654..ad898de 100755
 --- a/build.sh
 +++ b/build.sh
-@@ -67,7 +67,7 @@ export DEVTOOLSET_ROOTPATH
- export PREPEND_PATH
- export LD_LIBRARY_PATH_ARG
+@@ -133,7 +133,7 @@ fi
+ export MANYLINUX_DISABLE_CLANG_FOR_CPYTHON
+ 
  
 -MANYLINUX_IMAGE="quay.io/pypa/${POLICY}_${PLATFORM}:${COMMIT_SHA}"
 +MANYLINUX_IMAGE="ghcr.io/karellen/${POLICY}_${PLATFORM}:${COMMIT_SHA}"
  
  BUILD_ARGS_COMMON=(
  	"--platform=linux/${GOARCH}"
-diff --git a/docker/build_scripts/finalize-one.sh b/docker/build_scripts/finalize-one.sh
-index 4673bab..dbaee3c 100755
---- a/docker/build_scripts/finalize-one.sh
-+++ b/docker/build_scripts/finalize-one.sh
-@@ -16,6 +16,9 @@ fi
- PY_VER=$("${PREFIX}/bin/python" -c "import sys; print('.'.join(str(v) for v in sys.version_info[:2]))")
- PY_IMPL=$("${PREFIX}/bin/python" -c "import sys; print(sys.implementation.name)")
- PY_GIL=$("${PREFIX}/bin/python" -c "import sysconfig; print('t' if sysconfig.get_config_vars().get('Py_GIL_DISABLED', 0) else '')")
-+if [[ "${PREFIX}" == *"-shared"* ]]; then
-+	PY_SHARED="-shared"
-+fi
- 
- # disable some pip warnings
- export PIP_ROOT_USER_ACTION=ignore
-@@ -27,9 +30,6 @@ if [ "${PY_IMPL}" == "graalpy" ]; then
- 	# GraalPy doesn't update pip/setuptools because it uses a patched version of pip/setuptools
- 	"${PREFIX}/bin/python" -m ensurepip --default-pip
- 	"${PREFIX}/bin/python" -m pip install -U --require-hashes -r "${MY_DIR}/requirements${PY_VER}.txt"
--elif [ -f "/usr/local/bin/cpython${PY_VER}" ]; then
--	# Use the already installed cpython pip to bootstrap pip if available
--	"/usr/local/bin/cpython${PY_VER}" -m pip --python "${PREFIX}/bin/python" install -U --require-hashes -r "${MY_DIR}/requirements${PY_VER}.txt"
- else
- 	"${PREFIX}/bin/python" -m ensurepip
- 	"${PREFIX}/bin/python" -m pip install -U --require-hashes -r "${MY_DIR}/requirements${PY_VER}.txt"
-@@ -39,15 +39,17 @@ if [ -e "${PREFIX}/bin/pip3" ] && [ ! -e "${PREFIX}/bin/pip" ]; then
- fi
- # Create a symlink to PREFIX using the ABI_TAG in /opt/python/
- ABI_TAG=$("${PREFIX}/bin/python" "${MY_DIR}/python-tag-abi-tag.py")
--ln -s "${PREFIX}" "/opt/python/${ABI_TAG}"
-+ln -s "${PREFIX}" "/opt/python/${ABI_TAG}${PY_SHARED:-}"
- 
- # Make versioned python commands available directly in environment.
--# Don't use symlinks: c.f. https://github.com/python/cpython/issues/106045
--cat <<EOF > "/usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}"
-+if [ -z "${PY_SHARED:-}" ]; then
-+	# Don't use symlinks: c.f. https://github.com/python/cpython/issues/106045
-+	cat <<EOF > /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
- #!/bin/sh
- exec "/opt/python/${ABI_TAG}/bin/python" "\$@"
- EOF
--chmod +x "/usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}"
--if [[ "${PY_IMPL}" == "cpython" ]]; then
-+	chmod +x /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
-+fi
-+if [ "${PY_IMPL}" == "cpython" -a -z "${PY_SHARED:-}" ]; then
- 	ln -s "${PY_IMPL}${PY_VER}${PY_GIL}" "/usr/local/bin/python${PY_VER}${PY_GIL}"
- fi
-diff --git a/docker/build_scripts/manylinux-interpreters.py b/docker/build_scripts/manylinux-interpreters.py
-index f3b5b52..9a2ce85 100644
---- a/docker/build_scripts/manylinux-interpreters.py
-+++ b/docker/build_scripts/manylinux-interpreters.py
-@@ -27,7 +27,7 @@ def sort_key(tag):
- 
- @cache
- def get_all_tags(no_check: bool = False):
--    all_tags_ = {p.name for p in INSTALL_DIR.iterdir() if p.is_dir()}
-+    all_tags_ = {p.name for p in INSTALL_DIR.iterdir() if p.is_dir() and "-shared" not in p.name}
-     if POLICY.startswith("manylinux"):
-         all_tags_ |= {tag for tag in PYTHON_TAGS if ARCH in PYTHON_TAGS[tag]}
-     if no_check:
-diff --git a/tests/run_tests.sh b/tests/run_tests.sh
-index 39991f7..f602041 100755
---- a/docker/tests/run_tests.sh
-+++ b/docker/tests/run_tests.sh
-@@ -51,6 +51,9 @@ fi
- 
- PYTHON_COUNT=0
- for PYTHON in /opt/python/*/bin/python; do
-+	if [[ "$PYTHON" == /opt/python/*-shared*/bin/python ]]; then
-+		continue
-+	fi
- 	# Smoke test to make sure that our Pythons work, and do indeed detect as
- 	# being manylinux compatible:
- 	$PYTHON "${MY_DIR}/manylinux-check.py" "${AUDITWHEEL_POLICY}" "${AUDITWHEEL_ARCH}"
-diff --git a/docker/build_scripts/build-cpython.sh b/docker/build_scripts/build-cpython.sh
-index 39e9972..17420f9 100755
---- a/docker/build_scripts/build-cpython.sh
-+++ b/docker/build_scripts/build-cpython.sh
-@@ -38,11 +38,16 @@ mkdir -p "${PREFIX}/lib"
- CFLAGS_EXTRA=""
- CONFIGURE_ARGS=(--disable-shared --with-ensurepip=no)
- 
--if [ "${4:-}" == "nogil" ]; then
-+if [ "${4:-}" == "nogil" -o "${5:-}" == "nogil" ]; then
- 	PREFIX="${PREFIX}-nogil"
- 	CONFIGURE_ARGS+=(--disable-gil)
- fi
- 
-+if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
-+	PREFIX="${PREFIX}-shared"
-+	CONFIGURE_ARGS+=(--enable-shared)
-+fi
-+
- if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ] ; then
- 	# Python 3.11+
- 	export TCLTK_LIBS="-ltk8.6 -ltcl8.6"
-@@ -87,6 +92,9 @@ make > /dev/null
- make install > /dev/null
- popd
- rm -rf "Python-${CPYTHON_VERSION}" "Python-${CPYTHON_VERSION}.tar.xz" "Python-${CPYTHON_VERSION}.tar.xz.sigstore"
-+if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
-+	patchelf --force-rpath --set-rpath '$ORIGIN/../lib' "${PREFIX}/bin/python3"
-+fi
- 
- if [ "${OPENSSL_PREFIX}" != "" ]; then
- 	rm -rf "${OPENSSL_PREFIX:?}/bin" "${OPENSSL_PREFIX}/include" "${OPENSSL_PREFIX}/lib/pkgconfig" "${OPENSSL_PREFIX}/lib/*.so"
-@@ -97,3 +105,6 @@ clean_pyc "${PREFIX}"
- 
- # Strip ELF files found in ${PREFIX}
- strip_ "${PREFIX}"
-+
-+# Test that python is functioning
-+${PREFIX}/bin/python3 -c "pass"
 diff --git a/deploy.sh b/deploy.sh
 index 00d16fc..ff4fe61 100755
 --- a/deploy.sh
@@ -146,8 +33,94 @@ index 00d16fc..ff4fe61 100755
    docker push "${TAG}:${BUILD_ID}"
    docker push "${TAG}:latest"
  fi
+diff --git a/docker/build_scripts/build-cpython.sh b/docker/build_scripts/build-cpython.sh
+index 94f6d41..78a12c3 100755
+--- a/docker/build_scripts/build-cpython.sh
++++ b/docker/build_scripts/build-cpython.sh
+@@ -54,11 +54,16 @@ if [ "${AUDITWHEEL_ARCH}" == "loongarch64" ]; then
+ 	esac
+ fi
+ 
+-if [ "${4:-}" == "nogil" ]; then
++if [ "${4:-}" == "nogil" -o "${5:-}" == "nogil" ]; then
+ 	PREFIX="${PREFIX}-nogil"
+ 	CONFIGURE_ARGS+=(--disable-gil)
+ fi
+ 
++if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
++	PREFIX="${PREFIX}-shared"
++	CONFIGURE_ARGS+=(--enable-shared)
++fi
++
+ if [ "${AUDITWHEEL_POLICY}" == "manylinux2014" ] ; then
+ 	# Python 3.11+
+ 	export TCLTK_LIBS="-L/usr/local/lib -ltk8.6 -ltcl8.6"
+@@ -127,6 +132,9 @@ make > /dev/null
+ make install > /dev/null
+ popd
+ rm -rf "Python-${CPYTHON_VERSION}" "Python-${CPYTHON_VERSION}.tar.xz" "Python-${CPYTHON_VERSION}.tar.xz.sigstore"
++if [ "${4:-}" == "shared" -o "${5:-}" == "shared" ]; then
++	patchelf --force-rpath --set-rpath '$ORIGIN/../lib' "${PREFIX}/bin/python3"
++fi
+ 
+ if [ "${OPENSSL_PREFIX}" != "" ]; then
+ 	rm -rf "${OPENSSL_PREFIX:?}/bin" "${OPENSSL_PREFIX}/include" "${OPENSSL_PREFIX}/lib/pkgconfig" "${OPENSSL_PREFIX}/lib/*.so"
+@@ -137,3 +145,6 @@ clean_pyc "${PREFIX}"
+ 
+ # Strip ELF files found in ${PREFIX}
+ strip_ "${PREFIX}"
++
++# Test that python is functioning
++${PREFIX}/bin/python3 -c "pass"
+diff --git a/docker/build_scripts/finalize-one.sh b/docker/build_scripts/finalize-one.sh
+index ec8de38..280dd4c 100755
+--- a/docker/build_scripts/finalize-one.sh
++++ b/docker/build_scripts/finalize-one.sh
+@@ -16,6 +16,9 @@ fi
+ PY_VER=$("${PREFIX}/bin/python" -c "import sys; print('.'.join(str(v) for v in sys.version_info[:2]))")
+ PY_IMPL=$("${PREFIX}/bin/python" -c "import sys; print(sys.implementation.name)")
+ PY_GIL=$("${PREFIX}/bin/python" -c "import sysconfig; print('t' if sysconfig.get_config_vars().get('Py_GIL_DISABLED', 0) else '')")
++if [[ "${PREFIX}" == *"-shared"* ]]; then
++	PY_SHARED="-shared"
++fi
+ 
+ # disable some pip warnings
+ export PIP_ROOT_USER_ACTION=ignore
+@@ -30,9 +33,6 @@ if [ "${PY_IMPL}" == "graalpy" ]; then
+ 		3.11) "${PREFIX}/bin/python" -m pip uninstall -y setuptools;;
+ 	esac
+ 	"${PREFIX}/bin/python" -m pip install -U --require-hashes -r "${MY_DIR}/requirements${PY_VER}.txt"
+-elif [ -f "/usr/local/bin/cpython${PY_VER}" ]; then
+-	# Use the already installed cpython pip to bootstrap pip if available
+-	"/usr/local/bin/cpython${PY_VER}" -m pip --python "${PREFIX}/bin/python" install -U --require-hashes -r "${MY_DIR}/requirements${PY_VER}.txt"
+ else
+ 	"${PREFIX}/bin/python" -m ensurepip
+ 	case ${PY_VER} in
+@@ -45,15 +45,17 @@ if [ -e "${PREFIX}/bin/pip3" ] && [ ! -e "${PREFIX}/bin/pip" ]; then
+ fi
+ # Create a symlink to PREFIX using the ABI_TAG in /opt/python/
+ ABI_TAG=$("${PREFIX}/bin/python" "${MY_DIR}/python-tag-abi-tag.py")
+-ln -s "${PREFIX}" "/opt/python/${ABI_TAG}"
++ln -s "${PREFIX}" "/opt/python/${ABI_TAG}${PY_SHARED:-}"
+ 
+ # Make versioned python commands available directly in environment.
+-# Don't use symlinks: c.f. https://github.com/python/cpython/issues/106045
+-cat <<EOF > "/usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}"
++if [ -z "${PY_SHARED:-}" ]; then
++	# Don't use symlinks: c.f. https://github.com/python/cpython/issues/106045
++	cat <<EOF > /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
+ #!/bin/sh
+ exec "/opt/python/${ABI_TAG}/bin/python" "\$@"
+ EOF
+-chmod +x "/usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}"
+-if [[ "${PY_IMPL}" == "cpython" ]]; then
++	chmod +x /usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}
++fi
++if [ "${PY_IMPL}" == "cpython" -a -z "${PY_SHARED:-}" ]; then
+ 	ln -s "${PY_IMPL}${PY_VER}${PY_GIL}" "/usr/local/bin/python${PY_VER}${PY_GIL}"
+ fi
 diff --git a/docker/build_scripts/install-runtime-packages.sh b/docker/build_scripts/install-runtime-packages.sh
-index f56cf8f..68273bb 100755
+index 1b8e87a..11c1ed7 100755
 --- a/docker/build_scripts/install-runtime-packages.sh
 +++ b/docker/build_scripts/install-runtime-packages.sh
 @@ -71,7 +71,7 @@ else
@@ -180,13 +153,40 @@ index f56cf8f..68273bb 100755
  		# Install mayeut/devtoolset-10 repo to get devtoolset-10
  		curl -fsSLo /etc/yum.repos.d/mayeut-devtoolset-10.repo https://copr.fedorainfracloud.org/coprs/mayeut/devtoolset-10/repo/custom-1/mayeut-devtoolset-10-custom-1.repo
  	fi
-@@ -121,6 +124,9 @@ elif [ "${OS_ID_LIKE}" == "rhel" ]; then
+@@ -123,6 +126,9 @@ elif [ "${OS_ID_LIKE}" == "rhel" ]; then
  	EPEL=epel-release
  	if [ "${AUDITWHEEL_ARCH}" == "i686" ] || [ "${AUDITWHEEL_ARCH}" == "riscv64" ]; then
  		EPEL=
 +		# No patchelf in repo
 +		curl -Ls https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-i686.tar.gz | tar -xzf - -C /usr
 +		BASE_TOOLS=( ${BASE_TOOLS[@]/patchelf} )
+ 	elif [ "${AUDITWHEEL_ARCH}" == "loongarch64" ]; then
+ 		EPEL=anolis-epao-release
  	fi
- 	dnf -y install dnf-plugins-core ${EPEL}
- 	if [ "${AUDITWHEEL_POLICY}" == "manylinux_2_28" ]; then
+diff --git a/docker/build_scripts/manylinux-interpreters.py b/docker/build_scripts/manylinux-interpreters.py
+index f44a190..f3ceebe 100644
+--- a/docker/build_scripts/manylinux-interpreters.py
++++ b/docker/build_scripts/manylinux-interpreters.py
+@@ -27,7 +27,7 @@ def sort_key(tag):
+ 
+ @cache
+ def get_all_tags(no_check: bool = False):
+-    all_tags_ = {p.name for p in INSTALL_DIR.iterdir() if p.is_dir()}
++    all_tags_ = {p.name for p in INSTALL_DIR.iterdir() if p.is_dir() and "-shared" not in p.name}
+     if POLICY.startswith("manylinux"):
+         all_tags_ |= {tag for tag in PYTHON_TAGS if ARCH in PYTHON_TAGS[tag]}
+     if no_check:
+diff --git a/docker/tests/run_tests.sh b/docker/tests/run_tests.sh
+index 58192ce..3c11b2f 100755
+--- a/docker/tests/run_tests.sh
++++ b/docker/tests/run_tests.sh
+@@ -51,6 +51,9 @@ fi
+ 
+ PYTHON_COUNT=0
+ for PYTHON in /opt/python/*/bin/python; do
++	if [[ "$PYTHON" == /opt/python/*-shared*/bin/python ]]; then
++		continue
++	fi
+ 	# Smoke test to make sure that our Pythons work, and do indeed detect as
+ 	# being manylinux compatible:
+ 	$PYTHON "${MY_DIR}/manylinux-check.py" "${AUDITWHEEL_POLICY}" "${AUDITWHEEL_ARCH}"
