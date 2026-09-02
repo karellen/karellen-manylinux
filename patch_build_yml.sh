@@ -22,9 +22,17 @@ expect() {
 # patch context would contain pinned action SHAs, which upstream bumps on
 # roughly every dependency update and which broke a hunk every time.
 
-# Drop the pre-commit step (patch context: the actions/setup-python SHA).
-expect 1 '^ +- uses: pre-commit/action@'
-sed -i -E '/^ +- uses: pre-commit\/action@/d' "$DST"
+# Drop the upstream lint job. It runs upstream's linter against this fork's
+# root checkout, which has no lint configuration of its own. The whole job goes
+# rather than the individual tool step, so that upstream swapping linters
+# (pre-commit -> prek in #1988) does not break the update; and it is done here
+# rather than in build.yml.patch because the step's context is a pinned SHA.
+expect 1 '^  pre_commit:$'
+expect 1 '^    needs: pre_commit$'
+sed -i -E '/^  pre_commit:$/,/^  [a-z_][a-z0-9_]*:$/{/^  [a-z_][a-z0-9_]*:$/!d}; /^  pre_commit:$/d' "$DST"
+sed -i -E '/^    needs: pre_commit$/d' "$DST"
+expect 0 'pre_commit'
+expect 1 '^  build_matrix:$'
 
 # Branch and repository references (patch context: the docker/login-action SHA).
 expect 2 "github\.ref == 'refs/heads/main'"

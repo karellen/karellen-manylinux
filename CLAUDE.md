@@ -30,7 +30,10 @@ Transformations whose patch context would contain a pinned action SHA live here
 rather than in `build.yml.patch`. Upstream bumps those SHAs on roughly every
 dependency update, and each bump used to break a hunk (`c18235e`, `c8c7d8b`,
 `e1a4781`). `sed` is blind to the SHAs, so these survive dependency bumps:
-- Removes the `pre-commit` action step (context: the `actions/setup-python` SHA)
+- Removes the upstream lint job (`pre_commit`) and `build_matrix`'s
+  `needs: pre_commit`. The whole job goes, not just the linter step, so that
+  upstream swapping lint tools (`pre-commit` → `prek`) does not break the
+  update; the step itself also carries a pinned SHA
 - Branch references: `refs/heads/main` → `refs/heads/master` (context: the
   `docker/login-action` SHA)
 - Repository references: `pypa/manylinux` → `karellen/karellen-manylinux`
