@@ -73,7 +73,7 @@ index 94f6d41..78a12c3 100755
 +# Test that python is functioning
 +${PREFIX}/bin/python3 -c "pass"
 diff --git a/docker/build_scripts/finalize-one.sh b/docker/build_scripts/finalize-one.sh
-index ec8de38..280dd4c 100755
+index ffac3a5..778e548 100755
 --- a/docker/build_scripts/finalize-one.sh
 +++ b/docker/build_scripts/finalize-one.sh
 @@ -16,6 +16,9 @@ fi
@@ -96,7 +96,7 @@ index ec8de38..280dd4c 100755
  else
  	"${PREFIX}/bin/python" -m ensurepip
  	case ${PY_VER} in
-@@ -45,15 +45,17 @@ if [ -e "${PREFIX}/bin/pip3" ] && [ ! -e "${PREFIX}/bin/pip" ]; then
+@@ -45,19 +45,21 @@ if [ -e "${PREFIX}/bin/pip3" ] && [ ! -e "${PREFIX}/bin/pip" ]; then
  fi
  # Create a symlink to PREFIX using the ABI_TAG in /opt/python/
  ABI_TAG=$("${PREFIX}/bin/python" "${MY_DIR}/python-tag-abi-tag.py")
@@ -104,6 +104,10 @@ index ec8de38..280dd4c 100755
 +ln -s "${PREFIX}" "/opt/python/${ABI_TAG}${PY_SHARED:-}"
  
  # Make versioned python commands available directly in environment.
+ # pypy3.11 exists with 2 different ABIs, only link pp311-pypy311_pp73 for now
+ if [[ "${ABI_TAG}" == "pp311-pypy311_pp80" ]]; then
+ 	exit 0
+ fi
 -# Don't use symlinks: c.f. https://github.com/python/cpython/issues/106045
 -cat <<EOF > "/usr/local/bin/${PY_IMPL}${PY_VER}${PY_GIL}"
 +if [ -z "${PY_SHARED:-}" ]; then
@@ -164,10 +168,10 @@ index 1b8e87a..11c1ed7 100755
  		EPEL=anolis-epao-release
  	fi
 diff --git a/docker/build_scripts/manylinux-interpreters.py b/docker/build_scripts/manylinux-interpreters.py
-index f44a190..f3ceebe 100644
+index 9169609..76f72d8 100644
 --- a/docker/build_scripts/manylinux-interpreters.py
 +++ b/docker/build_scripts/manylinux-interpreters.py
-@@ -27,7 +27,7 @@ def sort_key(tag):
+@@ -46,7 +46,7 @@ def sort_key(tag):
  
  @cache
  def get_all_tags(no_check: bool = False):
@@ -177,10 +181,10 @@ index f44a190..f3ceebe 100644
          all_tags_ |= {tag for tag in PYTHON_TAGS if ARCH in PYTHON_TAGS[tag]}
      if no_check:
 diff --git a/docker/tests/run_tests.sh b/docker/tests/run_tests.sh
-index 58192ce..3c11b2f 100755
+index a84b1ff..20882e2 100755
 --- a/docker/tests/run_tests.sh
 +++ b/docker/tests/run_tests.sh
-@@ -51,6 +51,9 @@ fi
+@@ -64,6 +64,9 @@ make -C "${MY_DIR}/forty-two" all
  
  PYTHON_COUNT=0
  for PYTHON in /opt/python/*/bin/python; do
