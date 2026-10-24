@@ -86,17 +86,18 @@ index ffac3a5..778e548 100755
  
  # disable some pip warnings
  export PIP_ROOT_USER_ACTION=ignore
-@@ -30,9 +33,6 @@ if [ "${PY_IMPL}" == "graalpy" ]; then
+@@ -30,10 +33,6 @@ if [ "${PY_IMPL}" == "graalpy" ]; then
  		3.11) "${PREFIX}/bin/python" -m pip uninstall -y setuptools;;
  	esac
- 	"${PREFIX}/bin/python" -m pip install -U --require-hashes -r "${MY_DIR}/requirements${PY_VER}.txt"
+ 	"${PREFIX}/bin/python" -m pip install -U --require-hashes -r "${MY_DIR}/requirements/${PY_VER}/packages.txt"
 -elif [ -f "/usr/local/bin/cpython${PY_VER}" ]; then
 -	# Use the already installed cpython pip to bootstrap pip if available
--	"/usr/local/bin/cpython${PY_VER}" -m pip --python "${PREFIX}/bin/python" install -U --require-hashes -r "${MY_DIR}/requirements${PY_VER}.txt"
+-	"/usr/local/bin/cpython${PY_VER}" -m pip --python "${PREFIX}/bin/python" install -U --require-hashes -r "${MY_DIR}/requirements/${PY_VER}/pip.txt"
+-	"/usr/local/bin/cpython${PY_VER}" -m pip --python "${PREFIX}/bin/python" install -U --require-hashes -r "${MY_DIR}/requirements/${PY_VER}/packages.txt"
  else
  	"${PREFIX}/bin/python" -m ensurepip
  	case ${PY_VER} in
-@@ -45,19 +45,21 @@ if [ -e "${PREFIX}/bin/pip3" ] && [ ! -e "${PREFIX}/bin/pip" ]; then
+@@ -47,19 +46,21 @@ if [ -e "${PREFIX}/bin/pip3" ] && [ ! -e "${PREFIX}/bin/pip" ]; then
  fi
  # Create a symlink to PREFIX using the ABI_TAG in /opt/python/
  ABI_TAG=$("${PREFIX}/bin/python" "${MY_DIR}/python-tag-abi-tag.py")
